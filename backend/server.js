@@ -1,7 +1,12 @@
 const express = require("express");//importa o módulo express que contruir o servidior
 const cors = require("cors");//permite que acesse rotas diferentes(domínios)
-const bodyParser= require("body-parser")// middleware que analisa o corpo da requisição de entrada HTTP(dados que vem do formulario)
-const {v4:uuid} = require("uuid")//função responsavel por gerar ID´s unicos 
+const bodyParser= require("body-parser");// middleware que analisa o corpo da requisição de entrada HTTP(dados que vem do formulario)
+const {v4:uuid} = require("uuid");//função responsavel por gerar ID´s unicos 
+const fs = require("fs") //MANIPULA ARQUIVOS
+const path = require("path"); //DEFINE CAMINHO DOS ARQUIVOS
+const { error } = require("console");
+
+
 // INSTANCIANDO O EXPRESS
 const app = express();
 // DEFINE A PORTA DO SERVIDOR
@@ -12,8 +17,31 @@ app.use(cors());
 // usando o body-parse para a requisição
 app.use(bodyParser.json());
 
-// VARIAVEL QUE RECEBE UM ARRAY VAZIO
-let produtos =[];
+//LOCAL DO ARQUIVO JSON
+const caminho = path.join(__dirname, "produtos.json")
+
+//FUNÇO PARA LER OS DADOS DO ARQUIVO
+const lerProdutos = ()=>{
+    try{
+        const data = fs.readFileSync(caminho, "utf-8")
+        return JSON.parse(data)
+    } catch(error){
+        console.error("erro ao ler o arquivo", error)
+    }
+}
+
+//FUNÇÃO PARA GRAVAR DADOS NO ARQUIVO
+const salvarProdutos=(data)=>{
+    try{
+        fs.writeFileSync(caminho, JSON.stringify(data, null, 2), "utf-8")
+    } catch(error){
+        console.error("erro ao salvar dados n o arquivo", error)
+    }
+}
+
+
+// VARIAVEL QUE RECEBE A FUNÇÃO LER PRODUTOS
+let produtos =lerProdutos();
 
 // CRIANDO A ROTA CADASTRAR PRODUTO (post)
 
@@ -28,6 +56,8 @@ app.post("/produto",(req,res)=>{
     const novoItem ={id:uuid(),nome,descricao}
     // pega o que foi cadastraro e coloca no array produtos
     produtos.push(novoItem);
+    //salva os dados no arquivo json
+    salvarProdutos(produtos);
     // retorna a mensagem de sucesso
     res.status(201).json({message:"Cadastrado Efetuado com sucesso"})
 })
@@ -35,6 +65,22 @@ app.post("/produto",(req,res)=>{
 // ROTA PARA CONSULTAR OS PRODUTOS CADASTRADOS (get)
 app.get("/produto",(req,res)=>{
     res.json(produtos)
+})
+
+//ROTA PARA CONSULTAS PERSONALIZADAS (get)
+app.get("/produto/search",(req,res)=>{
+    //OBTEM O PARAMETRO DE PESQUISA NA URL
+    const {pesquisa} = req.query;
+    // VALIDANDO PESQUISA
+    if (!pesquisa){
+        return res.status(400).json({error: "Pesquisa não encontrada."})
+    }
+
+    // CONVERTE O TERMO DE PESQUISA PARA MINUSCULA
+    const termoPesquisa = pesquisa.toLowerCase();
+    // FILTRA OS PRODUTOS QUE CONTÉM O TERMO DE PESQUISA DE NOME E DESCRIÇÃO
+    const resultado = produtos.filter(item=>item.nome.toLowerCase().includes(termoPesquisa) || item.descricao.toLowerCase().includes(termoPesquisa));
+    res.json(resultado)
 })
 
 // ROTA PARA ALTERAR PRODUTO CADASTRADO
@@ -51,6 +97,9 @@ app.put("/produto/:id", (req,res)=>{
         return res.status(404).json({error:"Produto não encontrado"})
     }
     produtos[produtoIndex]={id:produtoId,nome, descricao};
+
+    // chamando a função que atualiza la no json
+    salvarProdutos(produtos)
     res.json(produtos[produtoIndex])
 
 })
@@ -71,6 +120,8 @@ app.delete("/produto/:id",(req,res)=>{
     }
     // mensagem afirmando que o produto foi removido
     res.status(404).send("Produto removido com sucesso")
+    // chamando a função que atualiza la no json
+    salvarProdutos(produtos)
 
 })
 
@@ -86,4 +137,3 @@ app.listen(Port, ()=>{
 
 
 
- 

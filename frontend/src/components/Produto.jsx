@@ -9,6 +9,7 @@ const Produto = () => {
     const [produto, setProduto]=useState([]);
     const [novoProduto, setNovoProduto]=useState({nome:"",descricao:""});
     const [editar, setEditar]=useState(false);
+    const [pesquisar, setPesquisar] = useState("");
 
     // CADASTRAR PRODUTO
     const cadastrarProduto =async ()=>{
@@ -29,23 +30,29 @@ const Produto = () => {
         }
     }
 
-    // HOOK useEffect - EFEITO PARA CARREGAR A LISTAR DE TODOS OS PRODUTOS CADASTRADOS
-
-    useEffect(()=>{
-        consultarProdutos();
-    })
-
     // CONSULTAR PRODUTOS CADASTRADOS
     const consultarProdutos= async ()=>{
         try{
-            const response = await axios.get(API_URL);
+            // verifica se trouxe uma pesquisa específica senão devolve a lista com todos
+            const url = pesquisar ? `${API_URL}/search?pesquisa=${pesquisar}`: API_URL
+            const response = await axios.get(url);
             setProduto(response.data);
 
         }
         catch(error){
             console.log("Erro ao consultar produto",error)
         }
-    }
+    };
+
+        // HOOK useEffect - EFEITO PARA CARREGAR A LISTAR DE TODOS OS PRODUTOS CADASTRADOS
+
+       useEffect(()=>{
+        // definindo timer de 3 segundos para o efeito
+        const timer=setTimeout(()=>{
+            consultarProdutos();
+        },300) //3 segundos
+        return ()=>clearTimeout(timer)
+    },[pesquisar]);
     
     // ALTERAR PRODUTO CADASTRADO
 
@@ -101,6 +108,15 @@ const Produto = () => {
     <div className="mx-auto p-3">
       <h1 className=" text-2xl font-bold mb-4 bg-blue-400 rounded-2xl">Cadastro de Produto</h1>
       <form className="mb-4">
+        <div>
+            <input
+                type="text"
+                placeholder="Pesquisar..."
+                className = "w-[300px] pl-4 pr-4 py-2 border border-gray-400 rounded-full"
+                value={pesquisar}
+                onChange={(e)=>setPesquisar(e.target.value)}
+            />
+        </div>
         <div className="mb-4">
           <label className=" block text-xl font-medium text-black bg-blue-300 rounded-2xl">Nome Produto</label>
           <input 
@@ -139,7 +155,7 @@ const Produto = () => {
             </div>
             <div>
                 <button onClick={()=>handleAlterar(item)}
-                className="bg-yellow-500 hover:bg-yellow-600 text-black font-bold py-2 px-2 rounded mr-2">Editar</button>
+                className="bg-yellow-300 hover:bg-yellow-400 text-black font-bold py-2 px-2 rounded mr-2">Editar</button>
                 <button onClick={()=>deletarProduto(item.id)}
                      className="bg-red-500 hover:bg-yellow-600 text-black font-bold py-2 px-2 rounded mr-2">Deletar</button>
             </div>
